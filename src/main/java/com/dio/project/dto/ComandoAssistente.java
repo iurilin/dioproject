@@ -5,11 +5,14 @@ import com.dio.project.domain.TipoTransacao;
 
 import java.math.BigDecimal;
 
-public record ComandoRegistro(
-        boolean ehRegistro,
+public record ComandoAssistente(
+        Intencao intencao,
         String descricao,
         BigDecimal valor,
         TipoTransacao tipo,
         Categoria categoria,
-        String data
+        String data,
+        Periodo periodo,
+        String inicio,
+        String fim
 ) {}
