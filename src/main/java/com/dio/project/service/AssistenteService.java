@@ -7,10 +7,8 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 
 import java.text.NumberFormat;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
-import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
@@ -23,10 +21,13 @@ public class AssistenteService {
 
     private final ChatClient chatClient;
     private final TransacaoService transacaoService;
+    private final PeriodoResolver periodoResolver;
 
-    public AssistenteService(ChatClient chatClient, TransacaoService transacaoService) {
+
+    public AssistenteService(ChatClient chatClient, TransacaoService transacaoService, PeriodoResolver periodoResolver) {
         this.chatClient = chatClient;
         this.transacaoService = transacaoService;
+        this.periodoResolver = periodoResolver;
     }
 
     public String responder(String mensagem) {
@@ -99,26 +100,8 @@ public class AssistenteService {
     }
 
     private LocalDate[] resolverPeriodo(ComandoAssistente cmd) {
-        LocalDate hoje = LocalDate.now();
-        Periodo periodo = cmd.periodo() != null ? cmd.periodo() : Periodo.ESTE_MES;
-
-        return switch (periodo) {
-            case HOJE -> new LocalDate[]{hoje, hoje};
-            case ONTEM -> new LocalDate[]{hoje.minusDays(1), hoje.minusDays(1)};
-            case ESTA_SEMANA -> new LocalDate[]{
-                    hoje.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)), hoje};
-            case ESTE_MES -> new LocalDate[]{
-                    hoje.withDayOfMonth(1), hoje.with(TemporalAdjusters.lastDayOfMonth())};
-            case MES_PASSADO -> {
-                LocalDate mes = hoje.minusMonths(1);
-                yield new LocalDate[]{
-                        mes.withDayOfMonth(1), mes.with(TemporalAdjusters.lastDayOfMonth())};
-            }
-            case ESTE_ANO -> new LocalDate[]{
-                    hoje.withDayOfYear(1), hoje.with(TemporalAdjusters.lastDayOfYear())};
-            case PERSONALIZADO -> new LocalDate[]{
-                    LocalDate.parse(cmd.inicio().trim()), LocalDate.parse(cmd.fim().trim())};
-        };
+        var i = periodoResolver.resolver(cmd.periodo(), cmd.inicio(), cmd.fim(), LocalDate.now());
+        return new LocalDate[]{i.inicio(), i.fim()};
     }
 
     private ComandoAssistente extrairComando(String mensagem) {
